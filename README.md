@@ -1,6 +1,6 @@
 # totp
 
-This is a CLI utility for managing TOTP keys and generating codes. It is written in PHP and has zero dependencies outside of the PHP standard library. All configurations are stored in ~/.totp
+This is a CLI utility for managing TOTP keys and generating codes. It is written in PHP and has zero dependencies outside of the PHP standard library. All configurations are stored in ~/.config/totp-cli.
 
 ## Usage
 
