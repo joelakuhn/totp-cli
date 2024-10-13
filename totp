@@ -94,9 +94,9 @@ function otp($secret, $len = 6, $period = 30) {
 function interactive_add() {
   echo "name: ";
   $name = trim(fgets(STDIN));
-  echo "keyphrase: ";
+  echo "secret: ";
   $secret = trim(fgets(STDIN));
-  echo "passphrase length [6]: ";
+  echo "code length [6]: ";
   $length = trim(fgets(STDIN)) ?: '6';
   echo "period [30]: ";
   $period = trim(fgets(STDIN)) ?: '30';
