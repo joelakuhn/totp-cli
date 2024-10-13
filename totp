@@ -1,6 +1,8 @@
 #!/usr/bin/env php
 <?php
 
+define('TOTP_CONFIG_DIR', "{$_SERVER['HOME']}/.config/totp-cli");
+
 class Base32 {
   const DECODE_ALPHABET = [
     0xff,
@@ -101,7 +103,7 @@ function interactive_add() {
   echo "period [30]: ";
   $period = trim(fgets(STDIN)) ?: '30';
   
-  file_put_contents("{$_SERVER['HOME']}/.totp/{$name}.ini", <<<EOF
+  file_put_contents(TOTP_CONFIG_DIR . "/{$name}.ini", <<<EOF
   [totp]
   name={$name}
   secret={$secret}
@@ -130,11 +132,11 @@ function eval_config($name) {
     return otp(trim(file_get_contents($name)));
   }
   else {
-    $txt_path = "{$_SERVER['HOME']}/.totp/{$name}.txt";
+    $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
     if (file_exists($txt_path)) {
       return eval_txt_config($txt_path);
     }
-    $ini_path = "{$_SERVER['HOME']}/.totp/{$name}.ini";
+    $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
     if (file_exists($ini_path)) {
       return eval_ini_config($ini_path);
     }
@@ -149,7 +151,7 @@ function eval_all() {
 
 function get_configs() {
   $configs = [];
-  $dh = opendir("{$_SERVER['HOME']}/.totp/");
+  $dh = opendir(TOTP_CONFIG_DIR);
   while ($file = readdir($dh)) {
     if (substr($file, 0, 1) === '.') continue;
     $configs[] = pathinfo($file, PATHINFO_FILENAME);
@@ -162,6 +164,13 @@ function list_configs() {
   foreach (get_configs() as $config) {
     echo "$config\n";
   }
+}
+
+if (!is_dir(dirname(TOTP_CONFIG_DIR))) {
+  mkdir(dirname(TOTP_CONFIG_DIR));
+}
+if (!is_dir(TOTP_CONFIG_DIR)) {
+  mkdir(TOTP_CONFIG_DIR);
 }
 
 if (isset($argv[1])) {
