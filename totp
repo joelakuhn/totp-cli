@@ -102,7 +102,7 @@ function interactive_add() {
   $length = trim(fgets(STDIN)) ?: '6';
   echo "period [30]: ";
   $period = trim(fgets(STDIN)) ?: '30';
-  
+
   file_put_contents(TOTP_CONFIG_DIR . "/{$name}.ini", <<<EOF
   [totp]
   name={$name}
@@ -166,6 +166,30 @@ function list_configs() {
   }
 }
 
+function confirm_unlink($file) {
+  echo "Remove `$file`? [Y/n]: ";
+  $response = trim(fgets(STDIN));
+  if ($response === '' || $response === 'y' || $response === 'Y') {
+    unlink($file);
+  }
+}
+
+function remove_config($name) {
+  if (file_exists($name)) {
+    confirm_unlink($name);
+  }
+  else {
+    $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
+    if (file_exists($txt_path)) {
+      confirm_unlink($txt_path);
+    }
+    $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
+    if (file_exists($ini_path)) {
+      confirm_unlink($ini_path);
+    }
+  }
+}
+
 if (!is_dir(dirname(TOTP_CONFIG_DIR))) {
   mkdir(dirname(TOTP_CONFIG_DIR));
 }
@@ -173,33 +197,44 @@ if (!is_dir(TOTP_CONFIG_DIR)) {
   mkdir(TOTP_CONFIG_DIR);
 }
 
-if (isset($argv[1])) {
-  $args = array_slice($argv, 1);
-  foreach ($args as $arg) {
-    if ($arg === 'add') {
-      interactive_add();
-    }
-    else if ($arg === 'list') {
-      list_configs();
-    }
-    else if ($arg === 'all') {
-      eval_all();
+function usage() {
+  echo "Usage: totp [name...]\n";
+  echo "totp -i, --insert   Interactively add a configuration\n";
+  echo "totp -l, --list     List configurations\n";
+  echo "totp -a, --all      Generate codes for all configurations\n";
+  echo "totp -r, --remove   Remove configuration\n";
+  echo "totp -h, --help     Show usage\n";
+}
+
+$opts = getopt('hialr:', ['help', 'insert', 'all', 'list', 'remove:'], $rest_ind);
+$rest = array_slice($argv, $rest_ind);
+
+if (isset($opts['help']) || isset($opts['h'])) {
+  usage();
+}
+else if (isset($opts['insert']) || isset($opts['i'])) {
+  interactive_add();
+}
+else if (isset($opts['all']) || isset($opts['a'])) {
+  eval_all();
+}
+else if (isset($opts['list']) || isset($opts['l'])) {
+  list_configs();
+}
+else if (isset($opts['remove']) || isset($opts['r'])) {
+  remove_config(($opts['remove'] ?? false) ?: ($opts['r'] ?? false));
+}
+else if (!empty($rest)) {
+  foreach ($rest as $arg) {
+    if ($totp = eval_config($arg)) {
+      if (count($rest) > 1) echo str_pad($arg . ':', 16);
+      echo "{$totp}\n";
     }
     else {
-      if ($totp = eval_config($arg)) {
-        if (count($args) > 1) echo str_pad($arg . ':', 16);
-        echo "{$totp}\n";
-      }
-      else {
-        echo "No config for $arg";
-      }
+      echo "No config for $arg";
     }
   }
 }
 else {
-  echo "Usage:\n";
-  echo "totp <name>   Generate code for named configuration\n";
-  echo "totp add      Interactively add a configuration\n";
-  echo "totp list     List configurations\n";
-  echo "totp all      Generate codes for all configurations\n";
+  usage();
 }
