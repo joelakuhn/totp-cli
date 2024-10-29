@@ -128,18 +128,16 @@ function eval_txt_config($path) {
 }
 
 function eval_config($name) {
+  $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
+  if (file_exists($txt_path)) {
+    return eval_txt_config($txt_path);
+  }
+  $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
+  if (file_exists($ini_path)) {
+    return eval_ini_config($ini_path);
+  }
   if (file_exists($name)) {
     return otp(trim(file_get_contents($name)));
-  }
-  else {
-    $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
-    if (file_exists($txt_path)) {
-      return eval_txt_config($txt_path);
-    }
-    $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
-    if (file_exists($ini_path)) {
-      return eval_ini_config($ini_path);
-    }
   }
 }
 
