@@ -113,32 +113,50 @@ function interactive_add() {
   EOF);
 }
 
-function eval_ini_config($path) {
+function read_ini_config($path) {
   $conf = parse_ini_file($path);
-  if (isset($conf['secret'])) {
-    $secret = $conf['secret'];
-    $length = $conf['length'] ?? 6;
-    $period = $conf['period'] ?? 30;
-    return otp($secret, $length, $period);
-  }
+  return (object)[
+    'secret' => $conf['secret'],
+    'length' => $conf['length'] ?? 6,
+    'period' => $conf['period'] ?? 30,
+  ];
 }
 
-function eval_txt_config($path) {
-  return otp(trim(file_get_contents($path)));
+function read_txt_config($path) {
+  return (object)[
+    'secret' => otp(trim(file_get_contents($path))),
+    'length' => 6,
+    'period' => 30,
+  ];
+}
+
+function read_config($name) {
+  if (file_exists($name)) {
+    return read_txt_config($name);
+  }
+  else {
+    $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
+    if (file_exists($txt_path)) {
+      return read_txt_config($txt_path);
+    }
+    $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
+    if (file_exists($ini_path)) {
+      return read_ini_config($ini_path);
+    }
+  }
+  return null;
 }
 
 function eval_config($name) {
-  $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
-  if (file_exists($txt_path)) {
-    return eval_txt_config($txt_path);
+  $config = read_config($name);
+  if ($config) {
+    return otp($config->secret, $config->length, $config->period);
   }
-  $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
-  if (file_exists($ini_path)) {
-    return eval_ini_config($ini_path);
-  }
-  if (file_exists($name)) {
-    return otp(trim(file_get_contents($name)));
-  }
+}
+
+function url($name) {
+  $config = read_config($name);
+  echo 'otpauth:///totp/' . urlencode($name) . "?secret={$config->secret}&period={$config->period}&digits={$config->length}";
 }
 
 function eval_all() {
@@ -201,10 +219,11 @@ function usage() {
   echo "totp -l, --list     List configurations\n";
   echo "totp -a, --all      Generate codes for all configurations\n";
   echo "totp -r, --remove   Remove configuration\n";
+  echo "totp -u, --url      Generate url for configuration\n";
   echo "totp -h, --help     Show usage\n";
 }
 
-$opts = getopt('hialr:', ['help', 'insert', 'all', 'list', 'remove:'], $rest_ind);
+$opts = getopt('hialur:', ['help', 'insert', 'all', 'list', 'url', 'remove:'], $rest_ind);
 $rest = array_slice($argv, $rest_ind);
 
 if (isset($opts['help']) || isset($opts['h'])) {
@@ -218,6 +237,11 @@ else if (isset($opts['all']) || isset($opts['a'])) {
 }
 else if (isset($opts['list']) || isset($opts['l'])) {
   list_configs();
+}
+else if (isset($opts['url']) || isset($opts['u'])) {
+  foreach ($rest as $arg) {
+    url($arg);
+  }
 }
 else if (isset($opts['remove']) || isset($opts['r'])) {
   remove_config(($opts['remove'] ?? false) ?: ($opts['r'] ?? false));
