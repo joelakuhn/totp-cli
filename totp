@@ -190,19 +190,50 @@ function confirm_unlink($file) {
   }
 }
 
-function remove_config($name) {
+function resolve_config($name) {
   if (file_exists($name)) {
-    confirm_unlink($name);
+    return realpath($name);
+  }
+  $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
+  if (file_exists($txt_path)) {
+    return realpath($txt_path);
+  }
+  $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
+  if (file_exists($ini_path)) {
+    return realpath($ini_path);
+  }
+  return false;
+}
+
+function remove_config($name) {
+  $path = resolve_config($name);
+  if ($path !== false) {
+    confirm_unlink($path);
+  }
+}
+
+function which_config($name) {
+  echo resolve_config($name) . "\n";
+}
+
+function show_secret($name) {
+  if (file_exists($name)) {
+    $conf = parse_ini_file($name);
+    $secret = $conf['secret'] . "\n";
   }
   else {
     $txt_path = TOTP_CONFIG_DIR . "/{$name}.txt";
     if (file_exists($txt_path)) {
-      confirm_unlink($txt_path);
+      echo file_get_contents($txt_path) . "\n";
     }
     $ini_path = TOTP_CONFIG_DIR . "/{$name}.ini";
     if (file_exists($ini_path)) {
-      confirm_unlink($ini_path);
+      $conf = parse_ini_file($ini_path);
+      $secret = $conf['secret'] . "\n";
     }
+  }
+  if (isset($conf) && isset($conf['secret'])) {
+    echo $secret;
   }
 }
 
@@ -220,14 +251,21 @@ function usage() {
   echo "totp -a, --all      Generate codes for all configurations\n";
   echo "totp -r, --remove   Remove configuration\n";
   echo "totp -u, --url      Generate url for configuration\n";
+  echo "totp -w, --which    Show path for configuration file\n";
+  echo "totp -s, --secret   Show secret for configuration\n";
   echo "totp -h, --help     Show usage\n";
 }
 
-$opts = getopt('hialur:', ['help', 'insert', 'all', 'list', 'url', 'remove:'], $rest_ind);
+$opts = getopt('hialsurw:', ['help', 'insert', 'all', 'list', 'secret', 'url', 'remove:', 'which:'], $rest_ind);
 $rest = array_slice($argv, $rest_ind);
 
 if (isset($opts['help']) || isset($opts['h'])) {
   usage();
+}
+else if (isset($opts['secret']) || isset($opts['s'])) {
+  foreach ($rest as $arg) {
+    show_secret($arg);
+  }
 }
 else if (isset($opts['insert']) || isset($opts['i'])) {
   interactive_add();
@@ -238,13 +276,11 @@ else if (isset($opts['all']) || isset($opts['a'])) {
 else if (isset($opts['list']) || isset($opts['l'])) {
   list_configs();
 }
-else if (isset($opts['url']) || isset($opts['u'])) {
-  foreach ($rest as $arg) {
-    url($arg);
-  }
-}
 else if (isset($opts['remove']) || isset($opts['r'])) {
   remove_config(($opts['remove'] ?? false) ?: ($opts['r'] ?? false));
+}
+else if (isset($opts['which']) || isset($opts['w'])) {
+  which_config(($opts['which'] ?? false) ?: ($opts['w'] ?? false));
 }
 else if (!empty($rest)) {
   foreach ($rest as $arg) {
