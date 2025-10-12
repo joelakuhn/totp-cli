@@ -276,6 +276,11 @@ else if (isset($opts['all']) || isset($opts['a'])) {
 else if (isset($opts['list']) || isset($opts['l'])) {
   list_configs();
 }
+else if (isset($opts['url']) || isset($opts['u'])) {
+  foreach ($rest as $arg) {
+    url($arg);
+  }
+}
 else if (isset($opts['remove']) || isset($opts['r'])) {
   remove_config(($opts['remove'] ?? false) ?: ($opts['r'] ?? false));
 }
